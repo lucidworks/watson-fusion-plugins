@@ -1,0 +1,213 @@
+plugins {
+  id 'java'
+//  id 'com.github.johnrengelman.shadow' version '1.2.2'
+//  id "com.moowork.node" version "0.11"
+}
+
+repositories {
+  mavenLocal()
+  mavenCentral()
+  //not thrilled by this, but let's try it
+  flatDir {
+    dirs "$fusionHome" + "/apps/libs"
+  }
+}
+
+defaultTasks 'build'
+
+//some useful common things
+task printVersions << {
+  println "Gradle is version " + GradleVersion.current()
+  println "Gradle is running with JVM " + org.gradle.internal.jvm.Jvm.current()
+}
+
+subprojects {
+  apply plugin: "maven"
+  apply plugin: "project-report"
+
+  tasks.withType(ScalaCompile) {
+    sourceCompatibility = "1.7"
+    targetCompatibility = "1.7"
+  }
+
+
+
+  // Global excludes
+  configurations {
+    compile.exclude group: "jline"
+    compile.exclude group: "jms"
+    compile.exclude group: "jmxri"
+    compile.exclude group: "jmxtools"
+    compile.exclude group: "mail"
+    compile.exclude group: "org.ow2.asm"
+    compile.exclude module: "wstx-asl"
+    /// we pull in javax.servlet:javax.servlet-api:3.1 or higher explicitly elsewhere; servlet-api:2.5 breaks things
+    compile.exclude group: "javax.servlet", module: "servlet-api"
+    compile.exclude group: "com.codahale.metrics"
+    // this has moved to io.dropwizard.metrics; we want to exclude old ones.
+  }
+
+  task allDeps(type: DependencyReportTask) {}
+  allDeps.description "Runs `dependencies` task on all subprojects. Accepts --configuration option"
+
+  task allDepInsight(type: DependencyInsightReportTask) << {}
+  allDepInsight.description "Run dependency insight for a given configuration and dependency. Use --configuration and  --dependency"
+
+  task deleteDepDump(type: Delete) {
+    delete "${buildDir}/dependency-jars"
+  }
+
+  task dumpDeps(type: Copy, dependsOn: [deleteDepDump]) {
+    description "Copy all the dependencies for a project into build/dependency-jars"
+    from configurations.compile
+    into "${buildDir}/dependency-jars"
+  }
+}
+
+task wrapper(type: Wrapper) {
+  gradleVersion = '2.13'
+  distributionUrl = "https://downloads.gradle.org/distributions/gradle-${gradleVersion}-all.zip"
+}
+
+task checkRequiredProperties() {
+  if (!project.hasProperty("fusionHome")) {
+    throw new GradleException('missing fusionHome. Configure in ~/.gradle/gradle.properties per the README.txt')
+  } else {
+    println("Fusion Home location set to $fusionHome")
+  }
+}
+checkRequiredProperties
+
+version = '1.0'
+jar {
+  manifest {
+    attributes 'Implementation-Title': 'Lucidworks Fusion Watson Plugins',
+      'Implementation-Version': version
+  }
+
+}
+
+def jarDir = "./build/libs"
+
+apply plugin: 'java'
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+
+
+dependencies {
+  compile fileTree(
+    dir: "$fusionHome/apps/libs/",
+    includes: ["*.jar"]
+  )
+  compile 'com.ibm.watson.developer_cloud:java-sdk:3.4.0'
+  testCompile ("com.github.tomakehurst:wiremock:1.57"){
+      exclude module: 'jetty'
+      exclude module: 'guava'
+      exclude module: 'jackson-core'
+      exclude module: 'jackson-annotations'
+      exclude module: 'jackson-databind'
+      exclude module: 'httpclient'
+    }
+  testCompile group: 'junit', name: 'junit', version: '4.11'
+  testCompile group: 'org.scalatest', name: 'scalatest_2.10', version: '2.2.1'
+}
+
+task deployLibsToSpark(type: Copy) {
+  from jarDir
+  into "$fusionHome/apps/spark/lib/"
+  dependsOn "compileJava"
+  dependsOn "jar"
+}
+
+task deployLibsToApi(type: Copy) {
+  from jarDir
+  into "$fusionHome/apps/libs/"
+  dependsOn "compileJava"
+  dependsOn "jar"
+}
+
+
+
+task deployDependencies() {
+    def spark = "$fusionHome/apps/spark/lib/"
+    def api = "$fusionHome/apps/libs"
+    /*def spark = "/tmp/spark"
+    def api = "/tmp/api"*/
+    configurations.compile.resolvedConfiguration.resolvedArtifacts.each{
+      f ->
+        copy {
+          from f.getFile()
+          into "$api"
+        }
+    }
+    configurations.compile.resolvedConfiguration.resolvedArtifacts.each{
+      f ->
+        copy {
+          from f.getFile()
+          into "$spark"
+        }
+    }
+}
+
+
+task deployLibs(dependsOn: [deployLibsToSpark, deployLibsToApi, deployDependencies]) {
+  //this is a hack, but acceptable for now
+  def watsonJar = "\napps/libs/watson-fusion-plugins-${version}.jar"
+
+  if (file("$fusionHome/apps/jetty/api/webapps/api-extra-classpath.txt").exists()) {
+    file("$fusionHome/apps/jetty/api/webapps/api-extra-classpath.txt").append(watsonJar)
+
+    println("Copied libs to apis")
+    configurations.compile.resolvedConfiguration.resolvedArtifacts.each{
+      f -> file("$fusionHome/apps/jetty/api/webapps/api-extra-classpath.txt").append("\napps/libs/" + f.name + "-" + f.moduleVersion.getId().getVersion() + ".jar")
+    }
+  }
+  if (file("$fusionHome/apps/jetty/connectors/webapps/connectors-extra-classpath.txt").exists()) {
+    file("$fusionHome/apps/jetty/connectors/webapps/connectors-extra-classpath.txt").append(watsonJar)
+    configurations.compile.resolvedConfiguration.resolvedArtifacts.each{
+      f -> file("$fusionHome/apps/jetty/connectors/webapps/connectors-extra-classpath.txt").append("\napps/libs/" + f.name + "-" + f.moduleVersion.getId().getVersion() + ".jar")
+    }
+    println("Copied libs to connectors")
+  }
+}
+
+
+task install(dependsOn: [deployLibs]) {
+  doFirst {
+    println("Installing Dependencies and other Requirements")
+  }
+  doLast {
+    println("!!!!!!! DON'T FORGET TO RESTART FUSION !!!!!!!!!")
+  }
+}
+
+
+task compile(dependsOn: [deployLibs]){
+
+}
+
+
+compileJava.doFirst{
+  println("Removing old instances of the plugin jar from Fusion")
+  delete fileTree(dir: "$fusionHome/apps/libs",
+      include: "watson-fusion-plugins*.jar"
+  )
+  delete fileTree(dir: "$fusionHome/apps/spark/lib/",
+    include: "watson-fusion-plugins*.jar"
+  )
+}
+
+
+//test {
+//  systemProperties 'property': 'value'
+//}
+
+uploadArchives {
+  repositories {
+    flatDir {
+      dirs 'repos'
+    }
+  }
+}
+
