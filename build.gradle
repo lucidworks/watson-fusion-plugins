@@ -30,8 +30,6 @@ subprojects {
     targetCompatibility = "1.7"
   }
 
-
-
   // Global excludes
   configurations {
     compile.exclude group: "jline"
@@ -82,7 +80,7 @@ version = '1.0'
 jar {
   manifest {
     attributes 'Implementation-Title': 'Lucidworks Fusion Watson Plugins',
-      'Implementation-Version': version
+            'Implementation-Version': version
   }
 
 }
@@ -97,20 +95,22 @@ targetCompatibility = 1.8
 
 dependencies {
   compile fileTree(
-    dir: "$fusionHome/apps/libs/",
-    includes: ["*.jar"]
+          dir: "$fusionHome/apps/libs/",
+          includes: ["*.jar"]
   )
   compile 'com.ibm.watson.developer_cloud:java-sdk:3.4.0'
-  testCompile ("com.github.tomakehurst:wiremock:1.57"){
-      exclude module: 'jetty'
-      exclude module: 'guava'
-      exclude module: 'jackson-core'
-      exclude module: 'jackson-annotations'
-      exclude module: 'jackson-databind'
-      exclude module: 'httpclient'
-    }
+  testCompile("com.github.tomakehurst:wiremock:1.57") {
+    exclude module: 'guava'
+    exclude module: 'jackson-core'
+    exclude module: 'jackson-annotations'
+    exclude module: 'jackson-databind'
+    exclude module: 'httpclient'
+  }
   testCompile group: 'junit', name: 'junit', version: '4.11'
   testCompile group: 'org.scalatest', name: 'scalatest_2.10', version: '2.2.1'
+  testCompile('org.mockito:mockito-core:1.10.19') {
+    exclude group: "org.hamcrest"
+  }
 }
 
 task deployLibsToSpark(type: Copy) {
@@ -130,24 +130,24 @@ task deployLibsToApi(type: Copy) {
 
 
 task deployDependencies() {
-    def spark = "$fusionHome/apps/spark/lib/"
-    def api = "$fusionHome/apps/libs"
-    /*def spark = "/tmp/spark"
-    def api = "/tmp/api"*/
-    configurations.compile.resolvedConfiguration.resolvedArtifacts.each{
-      f ->
-        copy {
-          from f.getFile()
-          into "$api"
-        }
-    }
-    configurations.compile.resolvedConfiguration.resolvedArtifacts.each{
-      f ->
-        copy {
-          from f.getFile()
-          into "$spark"
-        }
-    }
+  def spark = "$fusionHome/apps/spark/lib/"
+  def api = "$fusionHome/apps/libs"
+  /*def spark = "/tmp/spark"
+  def api = "/tmp/api"*/
+  configurations.compile.resolvedConfiguration.resolvedArtifacts.each {
+    f ->
+      copy {
+        from f.getFile()
+        into "$api"
+      }
+  }
+  configurations.compile.resolvedConfiguration.resolvedArtifacts.each {
+    f ->
+      copy {
+        from f.getFile()
+        into "$spark"
+      }
+  }
 }
 
 
@@ -159,13 +159,13 @@ task deployLibs(dependsOn: [deployLibsToSpark, deployLibsToApi, deployDependenci
     file("$fusionHome/apps/jetty/api/webapps/api-extra-classpath.txt").append(watsonJar)
 
     println("Copied libs to apis")
-    configurations.compile.resolvedConfiguration.resolvedArtifacts.each{
+    configurations.compile.resolvedConfiguration.resolvedArtifacts.each {
       f -> file("$fusionHome/apps/jetty/api/webapps/api-extra-classpath.txt").append("\napps/libs/" + f.name + "-" + f.moduleVersion.getId().getVersion() + ".jar")
     }
   }
   if (file("$fusionHome/apps/jetty/connectors/webapps/connectors-extra-classpath.txt").exists()) {
     file("$fusionHome/apps/jetty/connectors/webapps/connectors-extra-classpath.txt").append(watsonJar)
-    configurations.compile.resolvedConfiguration.resolvedArtifacts.each{
+    configurations.compile.resolvedConfiguration.resolvedArtifacts.each {
       f -> file("$fusionHome/apps/jetty/connectors/webapps/connectors-extra-classpath.txt").append("\napps/libs/" + f.name + "-" + f.moduleVersion.getId().getVersion() + ".jar")
     }
     println("Copied libs to connectors")
@@ -183,21 +183,20 @@ task install(dependsOn: [deployLibs]) {
 }
 
 
-task compile(dependsOn: [deployLibs]){
+task compile(dependsOn: [deployLibs]) {
 
 }
 
 
-compileJava.doFirst{
+compileJava.doFirst {
   println("Removing old instances of the plugin jar from Fusion")
   delete fileTree(dir: "$fusionHome/apps/libs",
-      include: "watson-fusion-plugins*.jar"
+          include: "watson-fusion-plugins*.jar"
   )
   delete fileTree(dir: "$fusionHome/apps/spark/lib/",
-    include: "watson-fusion-plugins*.jar"
+          include: "watson-fusion-plugins*.jar"
   )
 }
-
 
 //test {
 //  systemProperties 'property': 'value'

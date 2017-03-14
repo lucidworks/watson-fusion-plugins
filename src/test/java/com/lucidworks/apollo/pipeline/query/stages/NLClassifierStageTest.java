@@ -1,16 +1,46 @@
 package com.lucidworks.apollo.pipeline.query.stages;
 
 
+import com.github.tomakehurst.wiremock.WireMockServer;
+import com.github.tomakehurst.wiremock.client.WireMock;
+import com.github.tomakehurst.wiremock.core.WireMockConfiguration;
+import com.github.tomakehurst.wiremock.http.Fault;
+import com.google.common.base.Function;
+import com.ibm.watson.developer_cloud.service.exception.BadRequestException;
+import com.lucidworks.apollo.pipeline.Context;
+import com.lucidworks.apollo.pipeline.impl.DefaultContext;
+import com.ibm.watson.developer_cloud.natural_language_classifier.v1.model.Classification;
+import com.lucidworks.apollo.pipeline.query.QueryRequestAndResponse;
+import com.lucidworks.apollo.rest.RequestParams;
+import com.lucidworks.apollo.solr.response.AppendableResponse;
+import com.lucidworks.apollo.solr.response.JSONResponse;
+import javax.ws.rs.core.MultivaluedHashMap;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+
+import java.io.IOException;
+import java.net.ProtocolException;
+import javax.ws.rs.core.MediaType;
+
+import static com.github.tomakehurst.wiremock.client.WireMock.*;
+
 /**
  *
  *
  **/
 public class NLClassifierStageTest {
-  /*private static Logger log = LoggerFactory.getLogger(NLClassifierStageTest.class);
+  private static Logger log = LoggerFactory.getLogger(NLClassifierStageTest.class);
 
   private WireMockServer wireMockServer;
 
-  @BeforeClass
+  @Before
   public void setup() {
     WireMockConfiguration wireMockConfig = new WireMockConfiguration();
     int port = TestHelper.getRandomPort();
@@ -20,7 +50,7 @@ public class NLClassifierStageTest {
     wireMockServer.start();
   }
 
-  @AfterClass
+  @After
   public void tearDown() {
     WireMock.reset();
     wireMockServer.stop();
@@ -28,7 +58,7 @@ public class NLClassifierStageTest {
 
   //Happy path tests
   //Example Curl: curl -G -u "USER":"PASS"  "https://gateway.watsonplatform.net/natural-language-classifier/api/v1/classifiers/563C46x20-nlc-2357/classify"  --data-urlencode "text=How hot will it be today?"
-  @Test(groups = "unit")
+  @Test
   public void testRequest() throws Exception {
     stubFor(post(urlPathMatching("/v1/classifiers/563C46x20-nlc-2357"))
             .willReturn(aResponse()
@@ -36,23 +66,24 @@ public class NLClassifierStageTest {
                     .withHeader("Content-Type", MediaType.APPLICATION_JSON_TYPE.toString())
                     .withBody(WATSON_BASIC_RESONSE)));
 
-    NLClassifierStage stage = new NLClassifierStage();
+
     String url = "http://localhost:" + wireMockServer.port();
-    System.out.println("Watson Mock Endpoint" + url + " running: " + wireMockServer.isRunning());
+    //System.out.println("Watson Mock Endpoint" + url + " running: " + wireMockServer.isRunning());
     NLClassifierStageConfig config = new NLClassifierStageConfig("testBasics", "foo", "bar", NLClassifierStageConfig.REQUEST, "testBasicsKey", url, "563C46x20-nlc-2357",
-            NLClassifierStageConfig.REQUEST, "q", null, false);
-    PipelineContext context = new PipelineContext();
+            AbstractWatsonQueryStageConfig.REQUEST, "q", null, false);
+    NLClassifierStage stage = new NLClassifierStage(TestHelper.newParams(config));
+    Context context = DefaultContext.newContext();
     RequestParams params = new RequestParams();
     params.add("q", "How hot will it be today?");
     QueryRequestAndResponse msg = QueryRequestAndResponse.newRequest(params, null, "GET");
-    QueryRequestAndResponse reqRsp = stage.process(context, config, msg, QueryCamelPipeline.DEFAULT_CALLBACK);
+    QueryRequestAndResponse reqRsp = stage.process(msg, context);
     Object testBasicsKey = reqRsp.request.getFirstFieldValue("testBasicsKey");
     Assert.assertNotNull(testBasicsKey);
     //we are expecting the query string
-    Assert.assertEquals(testBasicsKey.toString(), "temperature conditions");
+    Assert.assertEquals("temperature conditions", testBasicsKey.toString());
   }
 
-  @Test(groups = "unit")
+  @Test
   public void testClassifierIdInRequest() throws Exception {
     stubFor(post(urlPathMatching("/v1/classifiers/563C46x20-nlc-2357"))
             .willReturn(aResponse()
@@ -60,24 +91,25 @@ public class NLClassifierStageTest {
                     .withHeader("Content-Type", MediaType.APPLICATION_JSON_TYPE.toString())
                     .withBody(WATSON_BASIC_RESONSE)));
 
-    NLClassifierStage stage = new NLClassifierStage();
+
     String url = "http://localhost:" + wireMockServer.port();
     NLClassifierStageConfig config = new NLClassifierStageConfig("testBasics", "foo", "bar", NLClassifierStageConfig.REQUEST,
             "testBasicsKey", url, null,
-            NLClassifierStageConfig.REQUEST, "q", null, false);
-    PipelineContext context = new PipelineContext();
+            AbstractWatsonQueryStageConfig.REQUEST, "q", null, false);
+    NLClassifierStage stage = new NLClassifierStage(TestHelper.newParams(config));
+    Context context = DefaultContext.newContext();
     RequestParams params = new RequestParams();
     params.add("classifierId", "563C46x20-nlc-2357");
     params.add("q", "How hot will it be today?");
     QueryRequestAndResponse msg = QueryRequestAndResponse.newRequest(params, null, "GET");
-    QueryRequestAndResponse reqRsp = stage.process(context, config, msg, QueryCamelPipeline.DEFAULT_CALLBACK);
+    QueryRequestAndResponse reqRsp = stage.process(msg, context);
     Object testBasicsKey = reqRsp.request.getFirstFieldValue("testBasicsKey");
     Assert.assertNotNull(testBasicsKey);
     //we are expecting the query string
-    Assert.assertEquals(testBasicsKey.toString(), "temperature conditions");
+    Assert.assertEquals("temperature conditions", testBasicsKey.toString());
   }
 
-  @Test(groups = "unit")
+  @Test
   public void testTopContent() throws Exception {
     stubFor(post(urlPathMatching("/v1/classifiers/563C46x20-nlc-2357"))
             .willReturn(aResponse()
@@ -85,23 +117,24 @@ public class NLClassifierStageTest {
                     .withHeader("Content-Type", MediaType.APPLICATION_JSON_TYPE.toString())
                     .withBody(WATSON_BASIC_RESONSE)));
 
-    NLClassifierStage stage = new NLClassifierStage();
+
     String url = "http://localhost:" + wireMockServer.port();
     NLClassifierStageConfig config = new NLClassifierStageConfig("testBasics", "foo", "bar", NLClassifierStageConfig.REQUEST, "testBasicsKey", url, "563C46x20-nlc-2357",
-            NLClassifierStageConfig.REQUEST, "q", null, true);
-    PipelineContext context = new PipelineContext();
+            AbstractWatsonQueryStageConfig.REQUEST, "q", null, true);
+    NLClassifierStage stage = new NLClassifierStage(TestHelper.newParams(config));
+    Context context = DefaultContext.newContext();
     RequestParams params = new RequestParams();
     params.add("q", "How hot will it be today?");
     QueryRequestAndResponse msg = QueryRequestAndResponse.newRequest(params, null, "GET");
-    QueryRequestAndResponse reqRsp = stage.process(context, config, msg, QueryCamelPipeline.DEFAULT_CALLBACK);
+    QueryRequestAndResponse reqRsp = stage.process(msg, context);
     Object testBasicsKey = reqRsp.request.getFirstFieldValue("testBasicsKey");
     Assert.assertNotNull(testBasicsKey);
     //we are expecting the query string
-    Assert.assertEquals(testBasicsKey.toString(), "temperature");
+    Assert.assertEquals("temperature", testBasicsKey.toString());
 
   }
 
-  @Test(groups = "unit")
+  @Test
   public void testTemplate() throws Exception {
     stubFor(post(urlPathMatching("/v1/classifiers/563C46x20-nlc-2357"))
             .willReturn(aResponse()
@@ -109,22 +142,23 @@ public class NLClassifierStageTest {
                     .withHeader("Content-Type", MediaType.APPLICATION_JSON_TYPE.toString())
                     .withBody(WATSON_BASIC_RESONSE)));
 
-    NLClassifierStage stage = new NLClassifierStage();
+
     String url = "http://localhost:" + wireMockServer.port();
-    NLClassifierStageConfig config = new NLClassifierStageConfig("testBasics", "foo", "bar", NLClassifierStageConfig.REQUEST, "testBasicsKey", url, "563C46x20-nlc-2357",
-            NLClassifierStageConfig.REQUEST, "q", "<classification.topConfidence>", false);
-    PipelineContext context = new PipelineContext();
+    NLClassifierStageConfig config = new NLClassifierStageConfig("testBasics", "foo", "bar", AbstractWatsonQueryStageConfig.REQUEST, "testBasicsKey", url, "563C46x20-nlc-2357",
+            NLClassifierStageConfig.REQUEST, "q", "<classification.topClass>", false);
+    NLClassifierStage stage = new NLClassifierStage(TestHelper.newParams(config));
+    Context context = DefaultContext.newContext();
     RequestParams params = new RequestParams();
     params.add("q", "How hot will it be today?");
     QueryRequestAndResponse msg = QueryRequestAndResponse.newRequest(params, null, "GET");
-    QueryRequestAndResponse reqRsp = stage.process(context, config, msg, QueryCamelPipeline.DEFAULT_CALLBACK);
+    QueryRequestAndResponse reqRsp = stage.process(msg, context);
     Object testBasicsKey = reqRsp.request.getFirstFieldValue("testBasicsKey");
     Assert.assertNotNull(testBasicsKey);
     //we are expecting the query string
-    Assert.assertEquals(testBasicsKey.toString(), "0.9933098208398066");
+    Assert.assertEquals("temperature", testBasicsKey.toString());
   }
 
-  @Test(groups = "unit")
+  @Test
   public void testContext() throws Exception {
     stubFor(post(urlPathMatching("/v1/classifiers/563C46x20-nlc-2357"))
             .willReturn(aResponse()
@@ -132,24 +166,25 @@ public class NLClassifierStageTest {
                     .withHeader("Content-Type", MediaType.APPLICATION_JSON_TYPE.toString())
                     .withBody(WATSON_BASIC_RESONSE)));
 
-    NLClassifierStage stage = new NLClassifierStage();
+    
     String url = "http://localhost:" + wireMockServer.port();
-    NLClassifierStageConfig config = new NLClassifierStageConfig("testBasics", "foo", "bar", NLClassifierStageConfig.CONTEXT, "testBasicsKey", url, "563C46x20-nlc-2357",
+    NLClassifierStageConfig config = new NLClassifierStageConfig("testBasics", "foo", "bar", AbstractWatsonStageConfig.CONTEXT, "testBasicsKey", url, "563C46x20-nlc-2357",
             NLClassifierStageConfig.CONTEXT, "q", null, false);
-    PipelineContext context = new PipelineContext();
+    NLClassifierStage stage = new NLClassifierStage(TestHelper.newParams(config));
+    Context context = DefaultContext.newContext();
     RequestParams params = new RequestParams();
     context.setProperty("q", "How hot will it be today?");
     QueryRequestAndResponse msg = QueryRequestAndResponse.newRequest(params, null, "GET");
-    QueryRequestAndResponse reqRsp = stage.process(context, config, msg, QueryCamelPipeline.DEFAULT_CALLBACK);
+    QueryRequestAndResponse reqRsp = stage.process(msg, context);
     Object testBasicsKey = context.getProperty("testBasicsKey");
     Assert.assertNotNull(testBasicsKey);
     //we are expecting the query string
     Assert.assertTrue(testBasicsKey instanceof Classification);
     Classification classification = (Classification) testBasicsKey;
-    Assert.assertEquals(classification.getTopClass(), "temperature");
+    Assert.assertEquals("temperature", classification.getTopClass());
   }
 
-  @Test(groups = "unit")
+  @Test
   public void testResponse() throws Exception {
     stubFor(post(urlPathMatching("/v1/classifiers/563C46x20-nlc-2357"))
             .willReturn(aResponse()
@@ -157,15 +192,16 @@ public class NLClassifierStageTest {
                     .withHeader("Content-Type", MediaType.APPLICATION_JSON_TYPE.toString())
                     .withBody(WATSON_BASIC_RESONSE)));
 
-    NLClassifierStage stage = new NLClassifierStage();
+
     String url = "http://localhost:" + wireMockServer.port();
-    NLClassifierStageConfig config = new NLClassifierStageConfig("testBasics", "foo", "bar", NLClassifierStageConfig.RESPONSE, "testBasicsKey", url, "563C46x20-nlc-2357",
+    NLClassifierStageConfig config = new NLClassifierStageConfig("testBasics", "foo", "bar", AbstractWatsonQueryStageConfig.RESPONSE, "testBasicsKey", url, "563C46x20-nlc-2357",
             NLClassifierStageConfig.CONTEXT, "q", null, false);
-    PipelineContext context = new PipelineContext();
+    NLClassifierStage stage = new NLClassifierStage(TestHelper.newParams(config));
+    Context context = DefaultContext.newContext();
     RequestParams params = new RequestParams();
     context.setProperty("q", "How hot will it be today?");
     QueryRequestAndResponse msg = QueryRequestAndResponse.newRequest(params, null, "GET");
-    QueryRequestAndResponse reqRsp = stage.process(context, config, msg, QueryCamelPipeline.DEFAULT_CALLBACK);
+    QueryRequestAndResponse reqRsp = stage.process(msg, context);
     // Given a fake JSON response here, add the landing pages to it
     JSONResponse resp = JSONResponse.create("{\n" +
             "  \"responseHeader\":{\n" +
@@ -178,7 +214,7 @@ public class NLClassifierStageTest {
             "  \"response\":{\"numFound\":0,\"start\":0,\"maxScore\":0.0,\"docs\":[]\n" +
             "  }}");
     msg = msg.withResponse(new MultivaluedHashMap<String, String>(), resp, -1);
-    Function<QueryRequestAndResponse, QueryRequestAndResponse> transformer = context.getProperty(PipelineContext.RESPONSE_TRANSFORMER, Function.class);
+    Function<QueryRequestAndResponse, QueryRequestAndResponse> transformer = context.getProperty(Context.RESPONSE_TRANSFORMER, Function.class);
     msg = transformer.apply(msg);
     JSONResponse finalResponse = (JSONResponse) msg.response.get().initialEntity;
     Assert.assertNotNull(finalResponse);
@@ -187,14 +223,14 @@ public class NLClassifierStageTest {
             AppendableResponse.FUSION_NODE,
             "testBasicsKey");
     Object trans = finalResponse.query(jxpath).get();
-    Assert.assertEquals(trans.toString(), "temperature conditions");
+    Assert.assertEquals("temperature conditions", trans.toString());
   }
 
 
   //Sad path tests
 
 
-  @Test(groups = "unit")
+  @Test
   public void testNoClassifierId() throws Exception {
     stubFor(post(urlPathMatching("/v1/classifiers/563C46x20-nlc-2357"))
             .willReturn(aResponse()
@@ -202,25 +238,26 @@ public class NLClassifierStageTest {
                     .withHeader("Content-Type", MediaType.APPLICATION_JSON_TYPE.toString())
                     .withBody(WATSON_BASIC_RESONSE)));
 
-    NLClassifierStage stage = new NLClassifierStage();
+    
     String url = "http://localhost:" + wireMockServer.port();
-    NLClassifierStageConfig config = new NLClassifierStageConfig("testBasics", "foo", "bar", NLClassifierStageConfig.REQUEST,
+    NLClassifierStageConfig config = new NLClassifierStageConfig("testBasics", "foo", "bar", AbstractWatsonQueryStageConfig.REQUEST,
             "testBasicsKey", url, null,
             NLClassifierStageConfig.REQUEST, "q", null, false);
-    PipelineContext context = new PipelineContext();
+    NLClassifierStage stage = new NLClassifierStage(TestHelper.newParams(config));
+    Context context = DefaultContext.newContext();
     RequestParams params = new RequestParams();
 
     params.add("q", "How hot will it be today?");
     QueryRequestAndResponse msg = QueryRequestAndResponse.newRequest(params, null, "GET");
     try {
-      QueryRequestAndResponse reqRsp = stage.process(context, config, msg, QueryCamelPipeline.DEFAULT_CALLBACK);
+      QueryRequestAndResponse reqRsp = stage.process(msg, context);
       Assert.fail();
     } catch (Exception e) {
 
     }
   }
 
-  @Test(groups = "unit")
+  @Test
   public void testBadInputLocation() throws Exception {
     stubFor(post(urlPathMatching("/v1/classifiers/563C46x20-nlc-2357"))
             .willReturn(aResponse()
@@ -228,17 +265,18 @@ public class NLClassifierStageTest {
                     .withHeader("Content-Type", MediaType.APPLICATION_JSON_TYPE.toString())
                     .withBody(WATSON_BASIC_RESONSE)));
 
-    NLClassifierStage stage = new NLClassifierStage();
+    
     String url = "http://localhost:" + wireMockServer.port();
     //shouldn't really be possible given the input validation
-    NLClassifierStageConfig config = new NLClassifierStageConfig("testBasics", "foo", "bar", NLClassifierStageConfig.REQUEST, "testBasicsKey", url, "563C46x20-nlc-2357",
+    NLClassifierStageConfig config = new NLClassifierStageConfig("testBasics", "foo", "bar", AbstractWatsonQueryStageConfig.REQUEST, "testBasicsKey", url, "563C46x20-nlc-2357",
             "foo", "q", null, false);
-    PipelineContext context = new PipelineContext();
+    NLClassifierStage stage = new NLClassifierStage(TestHelper.newParams(config));
+    Context context = DefaultContext.newContext();
     RequestParams params = new RequestParams();
     params.add("q", "How hot will it be today?");
     QueryRequestAndResponse msg = QueryRequestAndResponse.newRequest(params, null, "GET");
     try {
-      QueryRequestAndResponse reqRsp = stage.process(context, config, msg, QueryCamelPipeline.DEFAULT_CALLBACK);
+      QueryRequestAndResponse reqRsp = stage.process(msg, context);
       Assert.fail();
     } catch (Exception e) {
 
@@ -246,7 +284,7 @@ public class NLClassifierStageTest {
 
   }
 
-  @Test(groups = "unit")
+  @Test
   public void testNoInput() throws Exception {
     stubFor(post(urlPathMatching("/v1/classifiers/563C46x20-nlc-2357"))
             .willReturn(aResponse()
@@ -254,15 +292,16 @@ public class NLClassifierStageTest {
                     .withHeader("Content-Type", MediaType.APPLICATION_JSON_TYPE.toString())
                     .withBody(BAD_RESPONSE_400)));
 
-    NLClassifierStage stage = new NLClassifierStage();
+    
     String url = "http://localhost:" + wireMockServer.port();
-    NLClassifierStageConfig config = new NLClassifierStageConfig("testBasics", "foo", "bar", NLClassifierStageConfig.RESPONSE, "testBasicsKey", url, "563C46x20-nlc-2357",
+    NLClassifierStageConfig config = new NLClassifierStageConfig("testBasics", "foo", "bar", AbstractWatsonQueryStageConfig.RESPONSE, "testBasicsKey", url, "563C46x20-nlc-2357",
             NLClassifierStageConfig.CONTEXT, "q", null, false);
-    PipelineContext context = new PipelineContext();
+    NLClassifierStage stage = new NLClassifierStage(TestHelper.newParams(config));
+    Context context = DefaultContext.newContext();
     RequestParams params = new RequestParams();
     QueryRequestAndResponse msg = QueryRequestAndResponse.newRequest(params, null, "GET");
     try {
-      QueryRequestAndResponse reqRsp = stage.process(context, config, msg, QueryCamelPipeline.DEFAULT_CALLBACK);
+      QueryRequestAndResponse reqRsp = stage.process(msg, context);
       Assert.fail();
     } catch (Exception e) {
       //expected
@@ -270,7 +309,7 @@ public class NLClassifierStageTest {
   }
 
 
-  @Test(groups = "unit")
+  @Test
   public void testBadInput() throws Exception {
     stubFor(post(urlPathMatching("/v1/classifiers/563C46x20-nlc-2357"))
             .willReturn(aResponse()
@@ -278,38 +317,40 @@ public class NLClassifierStageTest {
                     .withHeader("Content-Type", MediaType.APPLICATION_JSON_TYPE.toString())
                     .withBody(BAD_RESPONSE_400)));
 
-    NLClassifierStage stage = new NLClassifierStage();
+    
     String url = "http://localhost:" + wireMockServer.port();
-    NLClassifierStageConfig config = new NLClassifierStageConfig("testBasics", "foo", "bar", NLClassifierStageConfig.RESPONSE, "testBasicsKey", url, "563C46x20-nlc-2357",
+    NLClassifierStageConfig config = new NLClassifierStageConfig("testBasics", "foo", "bar", AbstractWatsonQueryStageConfig.RESPONSE, "testBasicsKey", url, "563C46x20-nlc-2357",
             NLClassifierStageConfig.CONTEXT, "q", null, false);
-    PipelineContext context = new PipelineContext();
+    NLClassifierStage stage = new NLClassifierStage(TestHelper.newParams(config));
+    Context context = DefaultContext.newContext();
     RequestParams params = new RequestParams();
     context.setProperty("q", "How hot will it be today?");
     QueryRequestAndResponse msg = QueryRequestAndResponse.newRequest(params, null, "GET");
     try {
-      QueryRequestAndResponse reqRsp = stage.process(context, config, msg, QueryCamelPipeline.DEFAULT_CALLBACK);
+      QueryRequestAndResponse reqRsp = stage.process(msg, context);
       Assert.fail();
     } catch (BadRequestException e) {
       //expected
     }
   }
 
-  @Test(groups = "unit")
+  @Test
   public void testEmptyResponse() throws Exception {
     stubFor(post(urlPathMatching("/v1/classifiers/563C46x20-nlc-2357"))
             .willReturn(aResponse()
                     .withFault(Fault.EMPTY_RESPONSE)));
 
-    NLClassifierStage stage = new NLClassifierStage();
+    
     String url = "http://localhost:" + wireMockServer.port();
-    NLClassifierStageConfig config = new NLClassifierStageConfig("testBasics", "foo", "bar", NLClassifierStageConfig.RESPONSE, "testBasicsKey", url, "563C46x20-nlc-2357",
+    NLClassifierStageConfig config = new NLClassifierStageConfig("testBasics", "foo", "bar", AbstractWatsonQueryStageConfig.RESPONSE, "testBasicsKey", url, "563C46x20-nlc-2357",
             NLClassifierStageConfig.CONTEXT, "q", null, false);
-    PipelineContext context = new PipelineContext();
+    NLClassifierStage stage = new NLClassifierStage(TestHelper.newParams(config));
+    Context context = DefaultContext.newContext();
     RequestParams params = new RequestParams();
     context.setProperty("q", "How hot will it be today?");
     QueryRequestAndResponse msg = QueryRequestAndResponse.newRequest(params, null, "GET");
     try {
-      QueryRequestAndResponse reqRsp = stage.process(context, config, msg, QueryCamelPipeline.DEFAULT_CALLBACK);
+      QueryRequestAndResponse reqRsp = stage.process(msg, context);
       Assert.fail();
     } catch (RuntimeException e) {
       //expected
@@ -319,22 +360,23 @@ public class NLClassifierStageTest {
     }
   }
 
-  @Test(groups = "unit")
+  @Test
   public void testBadResponse() throws Exception {
     stubFor(post(urlPathMatching("/v1/classifiers/563C46x20-nlc-2357"))
             .willReturn(aResponse()
                     .withFault(Fault.MALFORMED_RESPONSE_CHUNK)));
 
-    NLClassifierStage stage = new NLClassifierStage();
+    
     String url = "http://localhost:" + wireMockServer.port();
-    NLClassifierStageConfig config = new NLClassifierStageConfig("testBasics", "foo", "bar", NLClassifierStageConfig.RESPONSE, "testBasicsKey", url, "563C46x20-nlc-2357",
+    NLClassifierStageConfig config = new NLClassifierStageConfig("testBasics", "foo", "bar", AbstractWatsonQueryStageConfig.RESPONSE, "testBasicsKey", url, "563C46x20-nlc-2357",
             NLClassifierStageConfig.CONTEXT, "q", null, false);
-    PipelineContext context = new PipelineContext();
+    NLClassifierStage stage = new NLClassifierStage(TestHelper.newParams(config));
+    Context context = DefaultContext.newContext();
     RequestParams params = new RequestParams();
     context.setProperty("q", "How hot will it be today?");
     QueryRequestAndResponse msg = QueryRequestAndResponse.newRequest(params, null, "GET");
     try {
-      QueryRequestAndResponse reqRsp = stage.process(context, config, msg, QueryCamelPipeline.DEFAULT_CALLBACK);
+      QueryRequestAndResponse reqRsp = stage.process(msg, context);
       Assert.fail();
     } catch (RuntimeException e) {
       //expected
@@ -344,22 +386,23 @@ public class NLClassifierStageTest {
     }
   }
 
-  @Test(groups = "unit")
+  @Test
   public void testRandomResponse() throws Exception {
     stubFor(post(urlPathMatching("/v1/classifiers/563C46x20-nlc-2357"))
             .willReturn(aResponse()
                     .withFault(Fault.RANDOM_DATA_THEN_CLOSE)));
 
-    NLClassifierStage stage = new NLClassifierStage();
+    
     String url = "http://localhost:" + wireMockServer.port();
-    NLClassifierStageConfig config = new NLClassifierStageConfig("testBasics", "foo", "bar", NLClassifierStageConfig.RESPONSE, "testBasicsKey", url, "563C46x20-nlc-2357",
+    NLClassifierStageConfig config = new NLClassifierStageConfig("testBasics", "foo", "bar", AbstractWatsonQueryStageConfig.RESPONSE, "testBasicsKey", url, "563C46x20-nlc-2357",
             NLClassifierStageConfig.CONTEXT, "q", null, false);
-    PipelineContext context = new PipelineContext();
+    NLClassifierStage stage = new NLClassifierStage(TestHelper.newParams(config));
+    Context context = DefaultContext.newContext();
     RequestParams params = new RequestParams();
     context.setProperty("q", "How hot will it be today?");
     QueryRequestAndResponse msg = QueryRequestAndResponse.newRequest(params, null, "GET");
     try {
-      QueryRequestAndResponse reqRsp = stage.process(context, config, msg, QueryCamelPipeline.DEFAULT_CALLBACK);
+      QueryRequestAndResponse reqRsp = stage.process(msg, context);
       Assert.fail();
     } catch (RuntimeException e) {
       //expected
@@ -369,25 +412,26 @@ public class NLClassifierStageTest {
     }
   }
 
-  @Test(groups = "unit")
+  @Test
   public void testBadEndpointAvailable() throws Exception {
     String url = "http://foo:65543";
-    NLClassifierStage stage = new NLClassifierStage();
-    NLClassifierStageConfig config = new NLClassifierStageConfig("testBasics", "foo", "bar", NLClassifierStageConfig.RESPONSE, "testBasicsKey", url, "563C46x20-nlc-2357",
+    
+    NLClassifierStageConfig config = new NLClassifierStageConfig("testBasics", "foo", "bar", AbstractWatsonQueryStageConfig.RESPONSE, "testBasicsKey", url, "563C46x20-nlc-2357",
             NLClassifierStageConfig.CONTEXT, "q", null, false);
-    PipelineContext context = new PipelineContext();
+    NLClassifierStage stage = new NLClassifierStage(TestHelper.newParams(config));
+    Context context = DefaultContext.newContext();
     RequestParams params = new RequestParams();
     context.setProperty("q", "How hot will it be today?");
     QueryRequestAndResponse msg = QueryRequestAndResponse.newRequest(params, null, "GET");
     try {
-      QueryRequestAndResponse reqRsp = stage.process(context, config, msg, QueryCamelPipeline.DEFAULT_CALLBACK);
+      QueryRequestAndResponse reqRsp = stage.process(msg, context);
       Assert.fail();
     } catch (IllegalArgumentException e) {
       //expected
     }
   }
 
-  @Test(groups = "unit")
+  @Test
   public void testDelayedResponse() throws Exception {
     stubFor(post(urlPathMatching("/v1/classifiers/563C46x20-nlc-2357"))
             .willReturn(aResponse()
@@ -395,19 +439,20 @@ public class NLClassifierStageTest {
                     .withHeader("Content-Type", MediaType.APPLICATION_JSON_TYPE.toString())
                     .withBody(WATSON_BASIC_RESONSE)));
 
-    NLClassifierStage stage = new NLClassifierStage();
+    
     String url = "http://localhost:" + wireMockServer.port();
-    NLClassifierStageConfig config = new NLClassifierStageConfig("testBasics", "foo", "bar", NLClassifierStageConfig.REQUEST, "testBasicsKey", url, "563C46x20-nlc-2357",
+    NLClassifierStageConfig config = new NLClassifierStageConfig("testBasics", "foo", "bar", AbstractWatsonQueryStageConfig.REQUEST, "testBasicsKey", url, "563C46x20-nlc-2357",
             NLClassifierStageConfig.REQUEST, "q", null, true);
-    PipelineContext context = new PipelineContext();
+    NLClassifierStage stage = new NLClassifierStage(TestHelper.newParams(config));
+    Context context = DefaultContext.newContext();
     RequestParams params = new RequestParams();
     params.add("q", "How hot will it be today?");
     QueryRequestAndResponse msg = QueryRequestAndResponse.newRequest(params, null, "GET");
-    QueryRequestAndResponse reqRsp = stage.process(context, config, msg, QueryCamelPipeline.DEFAULT_CALLBACK);
+    QueryRequestAndResponse reqRsp = stage.process(msg, context);
     Object testBasicsKey = reqRsp.request.getFirstFieldValue("testBasicsKey");
     Assert.assertNotNull(testBasicsKey);
     //we are expecting the query string
-    Assert.assertEquals(testBasicsKey.toString(), "temperature");
+    Assert.assertEquals("temperature", testBasicsKey.toString());
   }
 
 
@@ -431,5 +476,5 @@ public class NLClassifierStageTest {
           "  \"code\" : 400,\n" +
           "  \"error\" : \"Missing text\",\n" +
           "  \"description\" : \"The required 'text' parameter is missing.\"\n" +
-          "}";*/
+          "}";
 }

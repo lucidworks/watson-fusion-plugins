@@ -71,13 +71,13 @@ public class NLClassifierStageConfig extends AbstractWatsonQueryStageConfig {
                                  @JsonProperty("nlClassifierId") String nlClassifierId,
                                  @JsonProperty("inputLocation") String inputLocation,
                                  @JsonProperty("inputKey") String inputKey,
-                                 @JsonProperty("resultsTemplate") String resultsTemmplate,
+                                 @JsonProperty("resultsTemplate") String resultsTemplate,
                                  @JsonProperty("topCategoryOnly") Boolean topCategoryOnly) {
     super(id, username, password, resultsLocation, resultsKey, watsonEndpoint);
     this.nlClassifierId = nlClassifierId;
     this.inputLocation = inputLocation;
     this.inputKey = inputKey;
-    this.resultsTemplate = resultsTemmplate;
+    this.resultsTemplate = resultsTemplate;
     this.topCategoryOnly = topCategoryOnly;
   }
 
