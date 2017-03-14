@@ -26,6 +26,23 @@ existing Query Pipeline and fill in the appropriate parameters.
 As the name implies, the Speech To Text stage converts audio (we only accept audio/wav MIME type so far) and converts it to text, which
 can then be used downstream in the pipeline for querying or other usages.
 
+## API Usage
+
+The Speech To Text stage works by taking in audio/wav MIME type objects and transcribing them to text.  Thus, to use the stage, you need
+to submit an audio file to a query pipeline configured to use the Speech To Text stage (see an example configuration below).
+
+See our documentation for more detail, especially:
+1. https://doc.lucidworks.com/fusion/3.0/Search/Query-Pipelines.html
+1. https://doc.lucidworks.com/fusion/3.0/Pipeline_Stages_Reference/Query-Pipeline-Stages.html
+1. https://doc.lucidworks.com/fusion/3.0/REST_API_Reference/Query-Pipelines-API.html
+
+### Example API usage.
+
+Assuming you have a collection named "watson" setup and the Speech To Text stage configured in the default pipeline, you can do the following:
+
+
+    curl -X POST -H "Content-Type: audio/wav" -u USER:PASS -d @/PATH/TO/WAV/FILE "http://localhost:8764/api/apollo/query-pipelines/default/collections/watson/select"
+
 ### Example Configuration
 Here's an example configuration, with user and password XXXXXX'd out.  Note that transcribing audio can take some time.
 
@@ -94,6 +111,14 @@ Here's an example configuration, with user and password XXXXXX'd out.  Note that
 
 The NL Query Classifier is useful for attaching labels to a query, such as the intent of the query.  It requires you to build and train a model using Watson's services.  You must also know the 
 name of that model in order to plug it into the stage configuration in Fusion.
+
+### Example API usage.
+
+Assuming you have a collection named "watson" setup and the NL Query Classifier stage configured in the default pipeline, you can do the following:
+
+
+    curl -X POST -H "Content-Type: audio/wav" -u USER:PASS  "http://localhost:8764/api/apollo/query-pipelines/default/collections/watson/select?q=is+it+hot+out"
+
 
 ### Example Stage Configuration
 
