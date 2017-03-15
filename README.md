@@ -41,7 +41,7 @@ See our documentation for more detail, especially:
 Assuming you have a collection named "watson" setup and the Speech To Text stage configured in the default pipeline, you can do the following:
 
 
-    curl -X POST -H "Content-Type: audio/wav" -u USER:PASS -d @/PATH/TO/WAV/FILE "http://localhost:8764/api/apollo/query-pipelines/default/collections/watson/select"
+    curl -X POST -H "Content-Type: audio/wav" -u USER:PASS --data-binary @/PATH/TO/WAV/FILE "http://localhost:8764/api/apollo/query-pipelines/default/collections/watson/select"
 
 ### Example Configuration
 Here's an example configuration, with user and password XXXXXX'd out.  Note that transcribing audio can take some time.
@@ -117,7 +117,7 @@ name of that model in order to plug it into the stage configuration in Fusion.
 Assuming you have a collection named "watson" setup and the NL Query Classifier stage configured in the default pipeline, you can do the following:
 
 
-    curl -X POST -H "Content-Type: audio/wav" -u USER:PASS  "http://localhost:8764/api/apollo/query-pipelines/default/collections/watson/select?q=is+it+hot+out"
+    curl -X POST  -u USER:PASS  "http://localhost:8764/api/apollo/query-pipelines/default/collections/watson/select?q=is+it+hot+out"
 
 
 ### Example Stage Configuration
