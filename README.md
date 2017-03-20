@@ -1,25 +1,27 @@
-# watson-stages
+# IBM Watson Stages for Lucidworks Fusion
 Lucidworks Fusion stages for IBM Watson (BlueMix) Services.
 
 
-Prerequisites
+# Prerequisites
 
 1. You will need an IBM BlueMix account.  Depending on what stages you use, you will need to start one or more BlueMix services.  https://www.ibm.com/cloud-computing/bluemix/
+1. Lucidworks Fusion 3.0 or higher.  Download at http://lucidworks.com.
  
  
 # Installation
 
 1. Edit ~/.gradle/gradle.properties and add 
-  ```fusionHome=<PATH TO FUSION>```
+  ```fusionHome=<PATH TO WHERE FUSION IS INSTALLED>```
 1. ./gradlew install
 1. Restart Fusion
 
+Note, if you have a multi-node Fusion installation, you will need to copy the jars to each node and set the classpath entries accordingly.  See the build.gradle file for info on what files are updated.
 
 
 # Usage
 
 The Watson plugins currently consist of 2 query pipeline stages: Speech To text and Query Classification.  To use them, add the stages to an
-existing Query Pipeline and fill in the appropriate parameters.
+existing Query Pipeline and fill in the appropriate parameters.  See below for more details.
 
 
 ## Speech To Text
