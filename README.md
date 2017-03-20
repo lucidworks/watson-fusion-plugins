@@ -21,6 +21,7 @@ Prerequisites
 The Watson plugins currently consist of 2 query pipeline stages: Speech To text and Query Classification.  To use them, add the stages to an
 existing Query Pipeline and fill in the appropriate parameters.
 
+
 ## Speech To Text
 
 As the name implies, the Speech To Text stage converts audio (we only accept audio/wav MIME type so far) and converts it to text, which
@@ -117,7 +118,7 @@ name of that model in order to plug it into the stage configuration in Fusion.
 Assuming you have a collection named "watson" setup and the NL Query Classifier stage configured in the default pipeline, you can do the following:
 
 
-    curl -X POST  -u USER:PASS  "http://localhost:8764/api/apollo/query-pipelines/default/collections/watson/select?q=is+it+hot+out"
+    curl -X POST  -u USER:PASS  "http://localhost:8764/api/apollo/query-pipelines/default/collections/watson/select?q=is+it+hot+out&classifierId=XXXXXXXXXX"
 
 
 ### Example Stage Configuration
@@ -127,18 +128,17 @@ Assuming you have a collection named "watson" setup and the NL Query Classifier 
         "stages": [
           {
             "type": "nl-query-classifier",
-            "id": "ijlgf9j1c4kqyf1or",
-            "username": "xXx-Redacted-xXx",
+            "id": "m624ajt47a6qg2e29",
+            "username": "6c4d626c-6475-443f-9835-93cf56ca3eba",
             "password": "xXx-Redacted-xXx",
             "resultsLocation": "Request",
             "resultsKey": "watsonResults",
-            "nlClassifierId": "xXx-Redacted-xXx",
             "inputLocation": "Request",
             "inputKey": "q",
             "topCategoryOnly": true,
             "skip": false,
             "label": "nl-query-classifier",
-            "secretSourceStageId": "ijlgf9j1c4kqyf1or"
+            "secretSourceStageId": "m624ajt47a6qg2e29"
           },
           {
             "type": "recommendation",

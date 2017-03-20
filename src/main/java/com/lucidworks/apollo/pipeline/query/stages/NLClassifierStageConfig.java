@@ -38,8 +38,8 @@ public class NLClassifierStageConfig extends AbstractWatsonQueryStageConfig {
 
   @Annotations.SchemaProperty(
           title = "Input Location",
-          description = "The location to get the input from.  Whichever is chosen, it will be looked up using the input key.",
-          name = RESULTS_LOCATION,
+          description = "The location to get the input from, the context or the request.  Whichever is chosen, it will be looked up using the input key.",
+          name = INPUT_LOCATION,
           hints = {UIHints.ADVANCED},
           defaultValue = REQUEST)
   @Annotations.StringProperty(allowedValues = {REQUEST, CONTEXT}) //TODO: should this be an enumerated type?

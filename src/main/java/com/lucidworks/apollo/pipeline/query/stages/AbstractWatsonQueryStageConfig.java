@@ -6,7 +6,7 @@ import com.lucidworks.apollo.pipeline.schema.UIHints;
 import org.codehaus.jackson.annotate.JsonProperty;
 
 /**
- *
+ * Base class with some helpful attributes for query stages
  *
  **/
 public abstract class AbstractWatsonQueryStageConfig extends AbstractWatsonStageConfig {

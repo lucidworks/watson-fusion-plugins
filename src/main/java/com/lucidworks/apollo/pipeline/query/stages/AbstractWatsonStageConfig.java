@@ -13,6 +13,7 @@ import org.codehaus.jackson.annotate.JsonProperty;
 public abstract class AbstractWatsonStageConfig extends StageConfig {
 
   public static final String CONTEXT = "Context";
+  public static final String INPUT_LOCATION = "inputLocation";
   public static final String RESULTS_LOCATION = "resultsLocation";
   public static final String RESULTS_LOCATION_TITLE = "Results Location";
   public static final String RESULTS_LOC_DESC = "The location to put the results.  Whichever is chosen, the results will be stored using the Results Key.";

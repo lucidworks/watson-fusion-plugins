@@ -27,7 +27,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 
 /**
- *
+ * Converts AUDIO in the WAV format to text using IBM's Speech To Text service.  Learn more at https://www.ibm.com/watson/developercloud/speech-to-text.html
  *
  **/
 @AutoDiscover(type = SpeechToTextStageConfig.TYPE)

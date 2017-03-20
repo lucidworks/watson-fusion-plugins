@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- *
+ * Will be used by the Alchemy implementation once it is ready.  Carrying it along from a previous implementation of the Relationship Extraction stage.
  *
  **/
 public class RelExtractionParser {

@@ -10,6 +10,8 @@ import com.lucidworks.apollo.pipeline.schema.UIHints;
 import org.codehaus.jackson.annotate.JsonProperty;
 
 /**
+ * Base class with some helpful, common setters for index stages.
+ *
  * See https://github.com/watson-developer-cloud/java-sdk
  **/
 public abstract class AbstractWatsonIndexStageConfig extends AbstractWatsonStageConfig {

@@ -33,7 +33,10 @@ import java.util.List;
 import java.util.Map;
 
 /**
+ *   Utilizes the IBM NL Classifier to classify content.  See https://www.ibm.com/watson/developercloud/nl-classifier.html for more details.
  *
+ *   NOTE: You must have a trained model available and deployed in BlueMix before using this stage.  To see what classifiers you have trained,
+ *   you can GET the https://gateway.watsonplatform.net/natural-language-classifier/api/v1/classifiers URL to see a list.
  *
  **/
 @AutoDiscover(type = NLClassifierStageConfig.TYPE)
@@ -54,6 +57,7 @@ public class NLClassifierStage extends QueryStage<NLClassifierStageConfig> {
     String inputLoc = config.getInputLocation();
     String inputContent = null;
     String inputKey = config.getInputKey();
+    //check for input
     switch (inputLoc) {
       case NLClassifierStageConfig.REQUEST: {
         inputContent = message.request.getFirstFieldValue(inputKey);
@@ -68,6 +72,7 @@ public class NLClassifierStage extends QueryStage<NLClassifierStageConfig> {
         throw new Exception("Invalid input location: " + inputLoc);
       }
     }
+    //The input can use String Templates if you want.  See https://github.com/antlr/stringtemplate4/blob/master/doc/cheatsheet.md
     if (inputContent != null) {
       inputContent = renderTemplate(inputContent, message, context);
     }
@@ -100,6 +105,7 @@ public class NLClassifierStage extends QueryStage<NLClassifierStageConfig> {
             message.request.addParam(resultsKey, createQuery(classification, config.getResultsTemplate(), config.isTopCategoryOnly(), message, context));
             break;
           }
+          //Add the results into the response.
           case NLClassifierStageConfig.RESPONSE: {
             final Function<QueryRequestAndResponse, QueryRequestAndResponse> transformer
                     = context.getProperty(Context.RESPONSE_TRANSFORMER, Function.class);
