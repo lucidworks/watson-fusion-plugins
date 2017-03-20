@@ -120,7 +120,7 @@ name of that model in order to plug it into the stage configuration in Fusion.
 Assuming you have a collection named "watson" setup and the NL Query Classifier stage configured in the default pipeline, you can do the following:
 
 
-    curl -X POST  -u USER:PASS  "http://localhost:8764/api/apollo/query-pipelines/default/collections/watson/select?q=is+it+hot+out&classifierId=XXXXXXXXXX"
+    curl -X POST  -u USER:PASS  "http://localhost:8764/api/apollo/query-pipelines/default/collections/watson/select?q=is+it+hot+out&classifierId=XXXXXXXXXX" // Substitute in your classifierId or set the default on in the stage config.
 
 
 ### Example Stage Configuration
